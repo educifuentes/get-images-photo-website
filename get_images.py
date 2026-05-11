@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""
+Generic photo-portfolio image downloader.
+
+Usage:
+  python get_images.py <url>
+
+Dependencies: requests, beautifulsoup4, tqdm
+"""
+
+import os
+import sys
+from urllib.parse import urlparse
+
+import requests
+
+from helpers.downloader import crawl_and_collect, download_images
+from helpers.factory import get_extractor
+from helpers.utils import BROWSER_UA
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("Usage: python get_images.py <url>")
+        return 1
+
+    start_url = sys.argv[1]
+    base_out_dir = "downloads"
+    os.makedirs(base_out_dir, exist_ok=True)
+
+    print(f"Crawling {start_url} ...")
+    try:
+        r = requests.get(start_url, headers={'User-Agent': BROWSER_UA}, timeout=20)
+        r.raise_for_status()
+        html = r.text
+        extractor = get_extractor(start_url, html)
+        author, project = extractor.extract_meta(html)
+    except Exception as e:
+        print(f"Error fetching URL: {e}")
+        return 1
+
+    # Format the subfolder name
+    if author and project:
+        folder_name = f"{author} - {project}"
+    elif project:
+        folder_name = project
+    elif author:
+        folder_name = author
+    else:
+        folder_name = "unknown"
+
+    out_dir = os.path.join(base_out_dir, folder_name)
+    os.makedirs(out_dir, exist_ok=True)
+    print(f"Saving to: {out_dir}")
+
+    # For simple usage, we crawl with depth=0
+    images_all = crawl_and_collect(start_url, depth=0)
+
+    if not images_all:
+        print('No images found.')
+        return 1
+
+    # By default, prefer same-domain images. If none found, fall back to external/CDN-hosted images.
+    base_domain = urlparse(start_url).netloc
+    
+    # We allow external domains if they are CDNs (like squarespace-cdn). 
+    # But usually, it's better to just download whatever the extractor collected.
+    # The extractor logic is already refined for specific sites.
+    # If the user specifically wanted filtering, we can apply it.
+    # We will just download all images collected by the extractor.
+    download_images(images_all, start_url, out_dir, concurrency=6)
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
