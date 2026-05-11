@@ -10,10 +10,16 @@ pip install -r requirements.txt
 
 ## Usage
 
-Run the script by providing the target gallery URL:
+You can run the script by providing either a single target gallery URL or a text file containing a list of URLs (one per line):
 
+**Single URL:**
 ```bash
 python get_images.py <url>
+```
+
+**List of URLs:**
+```bash
+python get_images.py list_urls.txt
 ```
 
 **Example:**
