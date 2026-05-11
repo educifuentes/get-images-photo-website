@@ -19,16 +19,8 @@ from helpers.factory import get_extractor
 from helpers.utils import BROWSER_UA, dedup_resolutions
 
 
-def main() -> int:
-    if len(sys.argv) != 2:
-        print("Usage: python get_images.py <url>")
-        return 1
-
-    start_url = sys.argv[1]
-    base_out_dir = "downloads"
-    os.makedirs(base_out_dir, exist_ok=True)
-
-    print(f"Crawling {start_url} ...")
+def process_url(start_url: str, base_out_dir: str):
+    print(f"\n--- Processing {start_url} ---")
     try:
         r = requests.get(start_url, headers={'User-Agent': BROWSER_UA}, timeout=20)
         r.raise_for_status()
@@ -37,7 +29,7 @@ def main() -> int:
         author, project = extractor.extract_meta(html)
     except Exception as e:
         print(f"Error fetching URL: {e}")
-        return 1
+        return
 
     # Format the subfolder name
     if author and project:
@@ -59,7 +51,7 @@ def main() -> int:
 
     if not images_all:
         print('No images found.')
-        return 1
+        return
 
     # By default, prefer same-domain images. If none found, fall back to external/CDN-hosted images.
     base_domain = urlparse(start_url).netloc
@@ -70,6 +62,25 @@ def main() -> int:
     # If the user specifically wanted filtering, we can apply it.
     # We will just download all images collected by the extractor.
     download_images(images_all, start_url, out_dir, concurrency=6)
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("Usage: python get_images.py <url_or_file>")
+        return 1
+
+    target = sys.argv[1]
+    base_out_dir = "downloads"
+    os.makedirs(base_out_dir, exist_ok=True)
+
+    if os.path.isfile(target):
+        print(f"Reading URLs from file: {target}")
+        with open(target, 'r', encoding='utf-8') as f:
+            for line in f:
+                url = line.strip()
+                if url and not url.startswith('#'):
+                    process_url(url, base_out_dir)
+    else:
+        process_url(target, base_out_dir)
 
     return 0
 
