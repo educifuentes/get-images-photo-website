@@ -8,7 +8,7 @@ import requests
 
 IMG_EXTS = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.tif', '.tiff', '.bmp')
 
-_WP_SIZE_RE = re.compile(r'-\d+x\d+(\.[^.?]+)$', re.I)
+_SIZE_RE = re.compile(r'-(\d+)x(\d+)(\.[^.?]+)$', re.I)
 
 BROWSER_UA = (
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
@@ -19,17 +19,46 @@ _UNSAFE_CHARS_RE = re.compile(r'[\\/:*?"<>|]')
 _SEPARATORS_RE = re.compile(r'\s*[–—|]\s*')
 
 
-def dedup_wp_thumbnails(urls: set[str]) -> set[str]:
-    """Drop WordPress -WxH thumbnail variants when the full-size URL is also present."""
-    result = set()
+def dedup_resolutions(urls: set[str]) -> set[str]:
+    """
+    Detect duplicate images with varying resolution suffixes (e.g., -300x200)
+    and keep only the highest quality version (or the base URL if present).
+    """
+    groups = {}
     for url in urls:
         path = url.split('?')[0]
-        if _WP_SIZE_RE.search(path):
-            full = _WP_SIZE_RE.sub(r'\1', path)
-            full_url = full + url[len(path):]
-            if full_url in urls:
-                continue
-        result.add(url)
+        # Check if it has a -WxH suffix
+        m = _SIZE_RE.search(path)
+        if m:
+            base_path = path[:m.start()] + m.group(3)
+            base_url = base_path + url[len(path):]
+        else:
+            base_url = url
+            
+        if base_url not in groups:
+            groups[base_url] = []
+        groups[base_url].append(url)
+        
+    result = set()
+    for base_url, group_urls in groups.items():
+        if base_url in group_urls:
+            # Base URL is explicitly in the set, keep it
+            result.add(base_url)
+        else:
+            # Base URL not in set, find the one with largest area
+            best_url = group_urls[0]
+            max_area = -1
+            for u in group_urls:
+                path = u.split('?')[0]
+                m = _SIZE_RE.search(path)
+                if m:
+                    w, h = int(m.group(1)), int(m.group(2))
+                    area = w * h
+                    if area > max_area:
+                        max_area = area
+                        best_url = u
+            result.add(best_url)
+            
     return result
 
 

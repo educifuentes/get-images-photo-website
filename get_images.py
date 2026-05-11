@@ -16,7 +16,7 @@ import requests
 
 from helpers.downloader import crawl_and_collect, download_images
 from helpers.factory import get_extractor
-from helpers.utils import BROWSER_UA
+from helpers.utils import BROWSER_UA, dedup_resolutions
 
 
 def main() -> int:
@@ -55,6 +55,7 @@ def main() -> int:
 
     # For simple usage, we crawl with depth=0
     images_all = crawl_and_collect(start_url, depth=0)
+    images_all = dedup_resolutions(images_all)
 
     if not images_all:
         print('No images found.')
