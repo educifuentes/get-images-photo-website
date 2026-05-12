@@ -27,9 +27,15 @@ class WPPExtractor(BaseExtractor):
 
     def extract_images(self, html: str) -> set[str]:
         soup = BeautifulSoup(html, 'html.parser')
-        meta = soup.find('meta', property='og:image')
-        if meta and meta.get('content'):
-            return {urljoin(self.url, meta['content'])}
+        # Primary: main contest photo (class js-can-full-screen inside photo-details-new__img)
+        img = soup.select_one('div.photo-details-new__img img.js-can-full-screen')
+        if img and img.get('src'):
+            return {urljoin(self.url, img['src'])}
+        # Fallback: any /getmedia/ image that is not a portrait/author thumbnail
+        for tag in soup.find_all('img', src=re.compile(r'/getmedia/')):
+            parent_classes = ' '.join(tag.parent.get('class', []))
+            if 'author' not in parent_classes and 'portrait' not in parent_classes:
+                return {urljoin(self.url, tag['src'])}
         return set()
 
     def collect_images(self, session: requests.Session, start_url: str) -> set[str]:
