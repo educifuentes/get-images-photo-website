@@ -4,14 +4,18 @@ from helpers.base_extractor import BaseExtractor
 from helpers.extractor_generic import GenericExtractor
 from helpers.extractor_squarespace import SquarespaceExtractor
 from helpers.extractor_wordpress import WordPressExtractor
+from helpers.extractor_wpp import WPPExtractor
 
 
 def get_extractor(url: str, html: str) -> BaseExtractor:
     """Return the appropriate extractor based on the site's HTML."""
+    if 'worldpressphoto.org' in url:
+        return WPPExtractor(url)
+
     if '<!-- This is Squarespace. -->' in html or 'squarespace-cdn.com' in html:
         return SquarespaceExtractor(url)
-    
+
     if 'wp-content/uploads' in html or 'wp-includes' in html:
         return WordPressExtractor(url)
-        
+
     return GenericExtractor(url)

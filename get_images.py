@@ -10,8 +10,6 @@ Dependencies: requests, beautifulsoup4, tqdm
 
 import os
 import sys
-from urllib.parse import urlparse
-
 import requests
 
 from helpers.downloader import crawl_and_collect, download_images
@@ -45,22 +43,20 @@ def process_url(start_url: str, base_out_dir: str):
     os.makedirs(out_dir, exist_ok=True)
     print(f"Saving to: {out_dir}")
 
-    # For simple usage, we crawl with depth=0
-    images_all = crawl_and_collect(start_url, depth=0)
+    session = requests.Session()
+    session.headers.update({'User-Agent': BROWSER_UA})
+
+    if hasattr(extractor, 'collect_images'):
+        images_all = extractor.collect_images(session, start_url)
+    else:
+        images_all = crawl_and_collect(start_url, depth=0)
+
     images_all = dedup_resolutions(images_all)
 
     if not images_all:
         print('No images found.')
         return
 
-    # By default, prefer same-domain images. If none found, fall back to external/CDN-hosted images.
-    base_domain = urlparse(start_url).netloc
-    
-    # We allow external domains if they are CDNs (like squarespace-cdn). 
-    # But usually, it's better to just download whatever the extractor collected.
-    # The extractor logic is already refined for specific sites.
-    # If the user specifically wanted filtering, we can apply it.
-    # We will just download all images collected by the extractor.
     download_images(images_all, start_url, out_dir, concurrency=6)
 
 def main() -> int:
