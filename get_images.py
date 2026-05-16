@@ -59,6 +59,9 @@ def process_url(start_url: str, base_out_dir: str):
 
     download_images(images_all, start_url, out_dir, concurrency=6)
 
+    if hasattr(extractor, 'write_extras'):
+        extractor.write_extras(out_dir)
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python get_images.py <url_or_file>")

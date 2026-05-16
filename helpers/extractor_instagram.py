@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from urllib.parse import urlparse
 
@@ -52,3 +53,10 @@ class InstagramExtractor(BaseExtractor):
         elif not post.is_video:
             images.add(post.url)
         return images
+
+    def write_extras(self, out_dir: str) -> None:
+        post = self._get_post()
+        caption = post.caption or ""
+        md_path = os.path.join(out_dir, "post.md")
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(f"# Post\n\n**URL:** {self.url}\n\n## Caption\n\n{caption}\n")
