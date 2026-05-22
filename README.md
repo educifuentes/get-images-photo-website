@@ -19,12 +19,7 @@ python get_images.py <url>
 
 **List of URLs:**
 ```bash
-python get_images.py list_url/list_matr_sites.txt
-
-python get_images.py list_url/list_docu_sites.txt
-
-python get_images.py list_url/list_instagram_post.txt
-
+python get_images.py url_list.txt
 ```
 
 **Example:**
